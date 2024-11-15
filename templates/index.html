@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('Mérkőzés Eredmények') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .soccer {
+            background: url(http://upload.wikimedia.org/wikipedia/en/e/ec/Soccer_ball.svg);
+            background-size: 100px 100px;
+            height: 100px;
+            width: 100px;
+            margin: 0 auto;
+            display: block;
+            cursor: pointer;
+        }
+        .submission-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 18px;
+        }
+        .world-cup {
+            color: #82AE6F;
+            text-align: center;
+        }
+        .search-results {
+            list-style-type: none;
+            padding: 0;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        .search-results li {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .search-results li:hover {
+            background-color: #eee;
+        }
+    </style>
+    <script>
+        const teams = {
+        "A": ["Güppösék", "FC Scuipă-n Dunăre", "MNV", "SEPSIUUU", "Park the bus FC", "Nagykeró", "Kamikázé"],
+        "B": ["Kolozsvári SixtyNine", "Devastation", "Ratbull", "Aranyér FC", "Koma-Szutra", "Szimplu", "Kolozsvári Góbék"],
+        "C": ["Tiffosi 2010", "Kalotaszesz", "Kárahegy", "Prokomisz", "Mad Dogs", "Screwbolt", "Fc Finnviz"]
+    };
+
+    // Ékezet-mentesítő függvény
+    function removeDiacritics(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function updateSuggestions(group) {
+        const input1 = document.querySelector('input[name="team1_name"]');
+        const input2 = document.querySelector('input[name="team2_name"]');
+        const datalist1 = document.getElementById('team1_list');
+        const datalist2 = document.getElementById('team2_list');
+
+        const teamsInGroup = teams[group];
+
+        datalist1.innerHTML = '';
+        datalist2.innerHTML = '';
+
+        const input1Value = removeDiacritics(input1.value.toLowerCase());
+        const input2Value = removeDiacritics(input2.value.toLowerCase());
+
+        teamsInGroup.forEach(team => {
+            const normalizedTeam = removeDiacritics(team.toLowerCase());
+            if (normalizedTeam.startsWith(input1Value)) {
+                const option = document.createElement('option');
+                option.value = team;
+                datalist1.appendChild(option);
+            }
+            if (normalizedTeam.startsWith(input2Value)) {
+                const option = document.createElement('option');
+                option.value = team;
+                datalist2.appendChild(option);
+            }
+        });
+    }
+
+        function submitForm() {
+            document.getElementById('matchForm').submit();
+        }
+
+        async function searchPlayer(inputElement) {
+            const query = inputElement.value.trim();
+            if (query.length === 0) {
+                document.getElementById('search-results').style.display = 'none';
+                return;
+            }
+            const response = await fetch('/search_player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const results = await response.json();
+            const resultsList = document.getElementById('search-results');
+            resultsList.innerHTML = '';
+            results.forEach(name => {
+                const item = document.createElement('li');
+                item.textContent = name;
+                item.onclick = () => {
+                    inputElement.value = name;
+                    resultsList.style.display = 'none';
+                };
+                resultsList.appendChild(item);
+            });
+            resultsList.style.display = results.length ? 'block' : 'none';
+        }
+
+        function hideResults() {
+            document.getElementById('search-results').style.display = 'none';
+        }
+
+        function addYellowCardInput() {
+            const container = document.getElementById('yellow_card_players_container');
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.name = 'yellow_card_players[]';
+            newInput.placeholder = 'Játékos neve';
+            newInput.autocomplete = 'off';
+            newInput.oninput = function() { searchPlayer(newInput); };
+            container.appendChild(newInput);
+        }
+                function addRedCardInput() {
+            var container = document.getElementById('red_card_players_container');
+            var newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.name = 'red_card_players[]';
+            newInput.placeholder = 'Játékos neve';
+            newInput.autocomplete = 'off';
+            newInput.oninput = function() { searchPlayer(this); };
+            container.appendChild(newInput);
+        }
+       
+        document.getElementById('language-switcher').addEventListener('change', function() {
+    var lang = this.value;
+    fetch('/change_language', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ lang: lang })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();  // Frissíti az oldalt a nyelvváltás után
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
+
+
+
+    </script>
+</head>
+<body>
+    <form method="POST" action="{{ url_for('change_language') }}">
+        <select id="language-switcher" name="lang">
+            <option value="hu" {% if g.lang == 'hu' %}selected{% endif %}>Magyar</option>
+            <option value="ro" {% if g.lang == 'ro' %}selected{% endif %}>Român</option>
+        </select>
+    </form>
+    
+
+    <div class="container">
+        <h1>{{ _('Mérkőzés Eredmények') }}</h1>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form id="matchForm" action="/process" method="POST">
+            <div class="group-select">
+                <label for="group">{{ _('Válassz csoportot:') }}</label>
+                <select id="group" name="group" required onchange="updateSuggestions(this.value)">
+                    <option value="A">{{ _('A csoport') }}</option>
+                    <option value="B">{{ _('B csoport') }}</option>
+                    <option value="C">{{ _('C csoport') }}</option>
+                </select>
+            </div>
+            <div class="team-input">
+                <div class="team">
+                    <input type="text" name="team1_name" placeholder="{{ _('Csapat 1 neve') }}" list="team1_list" oninput="updateSuggestions(document.getElementById('group').value)" required>
+                    <datalist id="team1_list"></datalist>
+                    <input type="number" name="team1_score" placeholder="{{ _('Eredmény 1') }}" min="0" required>
+                </div>
+                <div class="vs-logo">VS</div>
+                <div class="team">
+                    <input type="text" name="team2_name" placeholder="{{ _('Csapat 2 neve') }}" list="team2_list" oninput="updateSuggestions(document.getElementById('group').value)" required>
+                    <datalist id="team2_list"></datalist>
+                    <input type="number" name="team2_score" placeholder="{{ _('Eredmény 2') }}" min="0" required>
+                </div>
+            </div>
+            <h2>{{ _('Lapok') }}</h2>
+            <!--Sarga lap-->
+            <div class="card-select">
+                <label for="yellow_cards">{{ _('Játékosok, akik sárga lapot kaptak:') }}</label>
+                <div id="yellow_card_players_container">
+                    <input type="text" name="yellow_card_players[]" placeholder="{{ _('Játékos 1 neve') }}" autocomplete="off" oninput="searchPlayer(this)">
+                </div>
+                <button class="sarga" type="button" onclick="addYellowCardInput()">{{ _('Sárga Hozzáadás') }}</button>
+                <ul id="search-results" class="search-results" onclick="hideResults()"></ul>
+            </div>
+              <!--Piros lap-->
+            <div class="card-select">
+                <label for="red_cards">{{ _('Játékosok, akik piros lapot kaptak:') }}</label>
+                <div id="red_card_players_container">
+                    <input type="text" name="red_card_players[]" placeholder="{{ _('Játékos 2 neve') }}" autocomplete="off" oninput="searchPlayer(this)">
+                </div>
+                <button class="piros" type="button" onclick="addRedCardInput()">{{ _('Piros Hozzáadás ') }}</button>
+                <ul id="search-results" class="search-results" onclick="hideResults()"></ul>
+            </div>
+            
+            <div class="soccer" onclick="submitForm()"></div>
+            <div class="submission-text">{{ _('Beküldés') }}</div>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+# Romanian translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-11-15 16:50+0200\n"
+"PO-Revision-Date: 2024-11-15 16:51+0200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: ro\n"
+"Language-Team: ro <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100 > 0 && n%100"
+" < 20)) ? 1 : 2);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.16.0\n"
+
+#: templates/index.html:6 templates/index.html:163
+msgid "Mérkőzés Eredmények"
+msgstr "Rezultatele Meciului"
+
+#: templates/index.html:170
+msgid "Válassz csoportot:"
+msgstr "Alege un grup:"
+
+#: templates/index.html:172
+msgid "A csoport"
+msgstr "Grupa A"
+
+#: templates/index.html:173
+msgid "B csoport"
+msgstr "Grupa B"
+
+#: templates/index.html:174
+msgid "C csoport"
+msgstr "Grupa C"
+
+#: templates/index.html:179
+msgid "Csapat 1 neve"
+msgstr "Numele echipei 1"
+
+#: templates/index.html:181
+msgid "Eredmény 1"
+msgstr "Rezultatul 1"
+
+#: templates/index.html:185
+msgid "Csapat 2 neve"
+msgstr "Numele echipei 2"
+
+#: templates/index.html:187
+msgid "Eredmény 2"
+msgstr "Rezultatul 2"
+
+#: templates/index.html:190
+msgid "Lapok"
+msgstr "Cartonașe"
+
+#: templates/index.html:193
+msgid "Játékosok, akik sárga lapot kaptak:"
+msgstr "Jucători care au primit cartonaș galben:"
+
+#: templates/index.html:195
+msgid "Játékos 1 neve"
+msgstr "Numele jucătorului 1"
+
+#: templates/index.html:197
+msgid "Sárga Hozzáadás"
+msgstr "Adăugare Galben"
+
+#: templates/index.html:202
+msgid "Játékosok, akik piros lapot kaptak:"
+msgstr "Jucători care au primit cartonaș roșu:"
+
+#: templates/index.html:204
+msgid "Játékos 2 neve"
+msgstr "Numele jucătorului 2"
+
+#: templates/index.html:206
+msgid "Piros Hozzáadás "
+msgstr "Adăugare Roșu"
+
+#: templates/index.html:211
+msgid "Beküldés"
+msgstr "Trimite"

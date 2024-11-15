@@ -1,0 +1,241 @@
+/* Alapértelmezett stílusok */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+/* Position the language switcher */
+#language-switcher {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 8px 12px;
+    background-color: #f8b400; /* Blue background */
+    color: white; /* Text color */
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    outline: none;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+    transition: background-color 0.3s ease;
+}
+
+/* Hover effect for the language switcher */
+#language-switcher:hover {
+    background-color: #000000; /* Darker blue on hover */
+}
+
+/* Style for the dropdown options */
+#language-switcher option {
+    background-color: #f8b400; /* Light background */
+    color: #333; /* Darker text color */
+}
+
+body {
+    background-image: url('https://scontent.fath5-1.fna.fbcdn.net/v/t39.30808-6/308974027_633031731688809_3659487164964249105_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=86c6b0&_nc_ohc=edlLfYN5v4cQ7kNvgEChCZ8&_nc_zt=23&_nc_ht=scontent.fath5-1.fna&_nc_gid=Acg2oUWJrknNa0mjAd55r8F&oh=00_AYAeJ96POVKkCTRSk4Ze4etDQXxjk7xvQ2BKjUSe8dyccA&oe=67381257'); /* Cseréld ki a kép nevét a sajátodra */
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: white;
+}
+
+.container {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 600px;
+    width: 100%;
+}
+
+h1 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: #f8b400;
+}
+
+/* Csoport kiválasztás stílusa */
+.group-select {
+    margin-bottom: 20px;
+}
+
+.group-select label {
+    font-size: 1.2em;
+    color: #f8b400;
+}
+
+.group-select select {
+    font-size: 1em;
+    padding: 5px;
+    border: none;
+    border-radius: 5px;
+    background: #f8b400;
+    color: white;
+}
+
+.team-input {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+}
+
+.team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+input[type="text"], input[type="number"] {
+    width: 120px;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 5px;
+    text-align: center;
+}
+
+input[type="text"] {
+    font-size: 1em;
+}
+
+input[type="number"] {
+    font-size: 1.2em;
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+.team input {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+.team input:focus {
+    outline: none;
+    background: #f8b400;
+    color: white;
+}
+
+/* "VS" logó stílusa */
+.vs-logo {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #f8b400;
+    padding: 0 10px;
+}
+
+.submission-text {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 18px;
+}
+
+.world-cup {
+    color: #82AE6F;
+    text-align: center;
+}
+
+/* Keresési eredmények stílusai */
+.search-results {
+    list-style-type: none;
+    padding: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    display: none;
+}
+
+.search-results li {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.search-results li:hover {
+    background-color: #eee;
+}
+/* Foci labda és felirat stílusok */
+.soccer {
+    background: url(http://upload.wikimedia.org/wikipedia/en/e/ec/Soccer_ball.svg);
+    background-size: 100px 100px;
+    height: 100px;
+    width: 100px;
+    margin: 20px auto 0; 
+    display: block;
+    cursor: pointer;
+    border-radius: 30em;
+}
+.soccer:hover {
+    box-shadow: 0 0.5em 1.5em -0.5em #beb9ae;
+  }
+.sarga{
+  align-items: center;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 16px;
+  padding: 0.7em 1.4em 0.7em 1.1em;
+  color: white;
+  background: #ad5389;
+  background: linear-gradient(0deg, rgb(218, 218, 34) 0%, #f0b30e 100%);
+  border: none;
+  box-shadow: 0 0.7em 1.5em -0.5em #a5161198;
+  letter-spacing: 0.05em;
+  border-radius: 20em;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.piros{
+    align-items: center;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 16px;
+  padding: 0.7em 1.4em 0.7em 1.1em;
+  color: white;
+  background: #ad5389;
+  background: linear-gradient(0deg, rgb(240, 8, 8) 0%, #db4306 100%);
+  border: none;
+  box-shadow: 0 0.7em 1.5em -0.5em #a5161198;
+  letter-spacing: 0.05em;
+  border-radius: 20em;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.sarga:hover {
+  box-shadow: 0 0.5em 1.5em -0.5em #f8b400;
+}
+
+.sarga:active {
+  box-shadow: 0 0.3em 1em -0.5em #ceba0698;
+}
+h2, .card-select label, .submission-text {
+    color: #f8b400; /* Sárga színkód */
+}
+
+/* A "Hozzáadás" gomb eredeti színének megtartása */
+.sarga {
+    color: inherit; /* Megtartja az alapértelmezett színt */
+}
+
+.piros:hover {
+    box-shadow: 0 0.5em 1.5em -0.5em #e45248;
+  }
+  
+  .piros:active {
+    box-shadow: 0 0.3em 1em -0.5em #ceba0698;
+  }
+  
+  /* A "Hozzáadás" gomb eredeti színének megtartása */
+  .piros {
+      color: inherit; /* Megtartja az alapértelmezett színt */
+  }
+  

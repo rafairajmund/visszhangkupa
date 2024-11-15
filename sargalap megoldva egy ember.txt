@@ -1,0 +1,448 @@
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+from unidecode import unidecode
+import openpyxl
+
+app = Flask(__name__)
+
+EXCEL_FILE_PATH = r'D:\visszhang\EREDMENYEK.xlsx'
+
+@app.route('/')
+def index():
+    players = get_players()
+    return render_template('index.html', players=players)
+
+@app.route('/process', methods=['POST'])
+def process():
+    team1_name = request.form['team1_name']
+    team2_name = request.form['team2_name']
+    team1_score = int(request.form['team1_score'])
+    team2_score = int(request.form['team2_score'])
+    group = request.form['group']
+
+    # Eredmények frissítése az Excel fájlban
+    update_excel(EXCEL_FILE_PATH, group, team1_name, team1_score, team2_name, team2_score)
+
+    # Sárgalapos játékosok kezelése
+    yellow_card_player = request.form.get('yellow_card_player')
+    if yellow_card_player:
+        update_card(yellow_card_player, 'FFFF00')  # Sárga szín hozzáadása
+
+    return redirect(url_for('index'))
+
+@app.route('/search_player', methods=['POST']) 
+def search_player():
+    query = request.json.get('query', '').lower().strip()
+    if not query:
+        return jsonify([])
+
+    players = get_players()
+    results = [p['name'] for p in players if query in p['name'].lower()]
+    return jsonify(results)
+
+def update_card(player_name, color):
+    try:
+        workbook = openpyxl.load_workbook(EXCEL_FILE_PATH)
+        sheet = workbook['Sarga-piros lapok']
+
+        for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
+            if row[0].value == player_name:
+                col = 3
+                while col <= 6 and row[col - 1].fill.start_color.index != '00000000':
+                    col += 1
+                fill = openpyxl.styles.PatternFill(start_color=color, end_color=color, fill_type="solid")
+                sheet.cell(row=row[0].row, column=col).fill = fill
+                workbook.save(EXCEL_FILE_PATH)
+                break
+    except Exception as e:
+        print(f"Hiba történt az Excel fájl frissítésekor: {e}")
+
+def get_players():
+    workbook = openpyxl.load_workbook(EXCEL_FILE_PATH)
+    sheet = workbook['Sarga-piros lapok']
+    players = []
+
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        name, team = row[0], row[1]
+        if name:
+            players.append({"name": name, "team": team})
+
+    return players
+
+def update_excel(path, group, team1_name, team1_score, team2_name, team2_score):
+    wb = openpyxl.load_workbook(path)
+    ws = wb[f"{group} CSOPORT"]
+
+    team1_index = None
+    team2_index = None
+
+    for row in range(2, ws.max_row + 1):
+        if ws.cell(row=row, column=1).value == team1_name:
+            team1_index = row
+        if ws.cell(row=row, column=1).value == team2_name:
+            team2_index = row
+
+    if team1_index is None or team2_index is None:
+        print("Egy vagy több csapat nem található a csoportban.")
+        return
+
+    update_team_data(ws, team1_index, team1_score, team2_score)
+    update_team_data(ws, team2_index, team2_score, team1_score)
+
+    update_rankings(ws)
+
+    wb.save(path)
+
+def update_team_data(ws, team_index, goals_scored, goals_conceded):
+    ws.cell(row=team_index, column=2).value = (ws.cell(row=team_index, column=2).value or 0) + 1
+
+    if goals_scored > goals_conceded:
+        ws.cell(row=team_index, column=3).value = (ws.cell(row=team_index, column=3).value or 0) + 1
+        ws.cell(row=team_index, column=8).value = (ws.cell(row=team_index, column=8).value or 0) + 3
+        ws.cell(row=team_index, column=9).value = add_forma(ws.cell(row=team_index, column=9).value, 'GY')
+    elif goals_scored == goals_conceded:
+        ws.cell(row=team_index, column=4).value = (ws.cell(row=team_index, column=4).value or 0) + 1
+        ws.cell(row=team_index, column=8).value = (ws.cell(row=team_index, column=8).value or 0) + 1
+        ws.cell(row=team_index, column=9).value = add_forma(ws.cell(row=team_index, column=9).value, 'D')
+    else:
+        ws.cell(row=team_index, column=5).value = (ws.cell(row=team_index, column=5).value or 0) + 1
+        ws.cell(row=team_index, column=9).value = add_forma(ws.cell(row=team_index, column=9).value, 'V')
+
+    ws.cell(row=team_index, column=6).value = (ws.cell(row=team_index, column=6).value or 0) + goals_scored
+    ws.cell(row=team_index, column=7).value = (ws.cell(row=team_index, column=7).value or 0) + (goals_scored - goals_conceded)
+
+def update_rankings(ws):
+    rankings = []
+    for row in range(2, ws.max_row + 1):
+        points = ws.cell(row=row, column=8).value or 0
+        goals_diff = ws.cell(row=row, column=7).value or 0
+        rankings.append((points, goals_diff, row))
+
+    rankings.sort(key=lambda x: (-x[0], -x[1]))
+
+    for rank, (_, _, row) in enumerate(rankings, start=1):
+        ws.cell(row=row, column=10).value = rank
+
+def add_forma(current_forma, result):
+    if current_forma is None:
+        return result
+    else:
+        forma_list = current_forma.split(',')
+        if len(forma_list) >= 5:
+            forma_list = forma_list[1:]
+        forma_list.append(result)
+        return ','.join(forma_list)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mérkőzés Eredmények</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .soccer {
+            background: url(http://upload.wikimedia.org/wikipedia/en/e/ec/Soccer_ball.svg);
+            background-size: 100px 100px;
+            height: 100px;
+            width: 100px;
+            margin: 0 auto;
+            display: block;
+            cursor: pointer;
+        }
+
+        .submission-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 18px;
+        }
+
+        .world-cup {
+            color: #82AE6F;
+            text-align: center;
+        }
+
+        .search-results {
+            list-style-type: none;
+            padding: 0;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            display: none;
+        }
+
+        .search-results li {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .search-results li:hover {
+            background-color: #eee;
+        }
+    </style>
+    <script>
+        const teams = {
+            "A": ["Güppösék", "FC Scuipă-n Dunăre", "MNV", "SEPSIUUU", "Park the bus FC", "Nagykeró", "Kamikázé"],
+            "B": ["Kolozsvári SixtyNine", "Devastation", "Ratbull", "Aranyér FC", "Koma-Szutra", "Szimplu", "Kolozsvári Góbék"],
+            "C": ["Tiffosi 2010", "Kalotaszesz", "Kárahegy", "Prokomisz", "Mad Dogs", "Screwbolt", "Fc Finnviz"]
+        };
+
+        function updateSuggestions(group) {
+            const input1 = document.querySelector('input[name="team1_name"]');
+            const input2 = document.querySelector('input[name="team2_name"]');
+            const datalist1 = document.getElementById('team1_list');
+            const datalist2 = document.getElementById('team2_list');
+
+            const teamsInGroup = teams[group];
+
+            datalist1.innerHTML = '';
+            datalist2.innerHTML = '';
+
+            const input1Value = input1.value.toLowerCase();
+            const input2Value = input2.value.toLowerCase();
+
+            teamsInGroup.forEach(team => {
+                if (team.toLowerCase().startsWith(input1Value)) {
+                    const option = document.createElement('option');
+                    option.value = team;
+                    datalist1.appendChild(option);
+                }
+                if (team.toLowerCase().startsWith(input2Value)) {
+                    const option = document.createElement('option');
+                    option.value = team;
+                    datalist2.appendChild(option);
+                }
+            });
+        }
+
+        function submitForm() {
+            document.getElementById('matchForm').submit();
+        }
+
+        async function searchPlayer(query) {
+            const response = await fetch('/search_player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const results = await response.json();
+            const resultsList = document.getElementById('search-results');
+            resultsList.innerHTML = '';
+            results.forEach(name => {
+                const item = document.createElement('li');
+                item.textContent = name;
+                item.onclick = () => document.getElementById('yellow_card_player').value = name;
+                resultsList.appendChild(item);
+            });
+            resultsList.style.display = results.length ? 'block' : 'none';
+        }
+
+        function hideResults() {
+            document.getElementById('search-results').style.display = 'none';
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Mérkőzés Eredmények</h1>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form id="matchForm" action="/process" method="POST">
+            <!-- Csoportválasztás és csapat nevek, pontszámok beviteli mezői -->
+            <div class="group-select">
+                <label for="group">Válassz csoportot:</label>
+                <select id="group" name="group" required onchange="updateSuggestions(this.value)">
+                    <option value="A">A csoport</option>
+                    <option value="B">B csoport</option>
+                    <option value="C">C csoport</option>
+                </select>
+            </div>
+
+            <div class="team-input">
+                <div class="team">
+                    <input type="text" name="team1_name" placeholder="Csapat 1 neve" list="team1_list" oninput="updateSuggestions(document.getElementById('group').value)" required>
+                    <datalist id="team1_list"></datalist>
+                    <input type="number" name="team1_score" placeholder="Eredmény" required>
+                </div>
+                <div class="vs-logo">VS</div>
+                <div class="team">
+                    <input type="text" name="team2_name" placeholder="Csapat 2 neve" list="team2_list" oninput="updateSuggestions(document.getElementById('group').value)" required>
+                    <datalist id="team2_list"></datalist>
+                    <input type="number" name="team2_score" placeholder="Eredmény" required>
+                </div>
+            </div>
+
+            <!-- Sárgalapos játékos kiválasztása -->
+            <h2>Lapok</h2>
+            <div class="card-select">
+                <label for="yellow_card_player">Válassz játékosokat, akik sárga lapot kaptak:</label>
+                <input type="text" id="yellow_card_player" placeholder="Játékos neve" name="yellow_card_player" oninput="searchPlayer(this.value)" autocomplete="off">
+                <ul id="search-results" class="search-results" onclick="hideResults()"></ul>
+            </div>
+
+            <!-- Beküldés gomb (Foci labda) -->
+            <div class="soccer" onclick="submitForm()"></div>
+            <div class="submission-text">Beküldés</div>
+        </form>
+    </div>
+</body>
+</html>
+/* Alapértelmezett stílusok */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-image: url('https://scontent.fath5-1.fna.fbcdn.net/v/t39.30808-6/308974027_633031731688809_3659487164964249105_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=86c6b0&_nc_ohc=edlLfYN5v4cQ7kNvgEChCZ8&_nc_zt=23&_nc_ht=scontent.fath5-1.fna&_nc_gid=Acg2oUWJrknNa0mjAd55r8F&oh=00_AYAeJ96POVKkCTRSk4Ze4etDQXxjk7xvQ2BKjUSe8dyccA&oe=67381257'); /* Cseréld ki a kép nevét a sajátodra */
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: white;
+}
+
+.container {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 600px;
+    width: 100%;
+}
+
+h1 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: #f8b400;
+}
+
+/* Csoport kiválasztás stílusa */
+.group-select {
+    margin-bottom: 20px;
+}
+
+.group-select label {
+    font-size: 1.2em;
+    color: #f8b400;
+}
+
+.group-select select {
+    font-size: 1em;
+    padding: 5px;
+    border: none;
+    border-radius: 5px;
+    background: #f8b400;
+    color: white;
+}
+
+.team-input {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+}
+
+.team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+input[type="text"], input[type="number"] {
+    width: 120px;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 5px;
+    text-align: center;
+}
+
+input[type="text"] {
+    font-size: 1em;
+}
+
+input[type="number"] {
+    font-size: 1.2em;
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+.team input {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+.team input:focus {
+    outline: none;
+    background: #f8b400;
+    color: white;
+}
+
+/* "VS" logó stílusa */
+.vs-logo {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #f8b400;
+    padding: 0 10px;
+}
+
+/* Foci labda és felirat stílusok */
+.soccer {
+    background: url(http://upload.wikimedia.org/wikipedia/en/e/ec/Soccer_ball.svg);
+    background-size: 100px 100px;
+    height: 100px;
+    width: 100px;
+    margin: 0 auto;
+    display: block;
+    cursor: pointer;
+}
+
+.submission-text {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 18px;
+}
+
+.world-cup {
+    color: #82AE6F;
+    text-align: center;
+}
+
+/* Keresési eredmények stílusai */
+.search-results {
+    list-style-type: none;
+    padding: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    display: none;
+}
+
+.search-results li {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.search-results li:hover {
+    background-color: #eee;
+}
+.sargalap{
+    width: 65px;               /* Szélesség */
+    height: 90px;              /* Magasság */
+    background-color: yellow;   /* Szín */
+    border: 2px solid black;    /* Szegély */
+    border-radius: 5px;         /* Lekerekített sarkok */
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Árnyék */
+}

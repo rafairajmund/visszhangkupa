@@ -1,0 +1,302 @@
+from flask import Flask, render_template, request, redirect, url_for
+import openpyxl
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/process', methods=['POST'])
+def process():
+    team1_name = request.form['team1_name']
+    team2_name = request.form['team2_name']
+    team1_score = int(request.form['team1_score'])
+    team2_score = int(request.form['team2_score'])
+    group = request.form['group']
+
+    excel_path = r'D:\visszhang\EREDMENYEK.xlsx'
+    update_excel(excel_path, group, team1_name, team1_score, team2_name, team2_score)
+
+    return redirect(url_for('index'))
+
+def update_excel(path, group, team1_name, team1_score, team2_name, team2_score):
+    wb = openpyxl.load_workbook(path)
+    ws = wb[f"{group} CSOPORT"]
+
+    team1_index = None
+    team2_index = None
+
+    for row in range(2, ws.max_row + 1):
+        if ws.cell(row=row, column=1).value == team1_name:
+            team1_index = row
+        if ws.cell(row=row, column=1).value == team2_name:
+            team2_index = row
+
+    if team1_index is None or team2_index is None:
+        print("Egy vagy több csapat nem található a csoportban.")
+        return
+
+    update_team_data(ws, team1_index, team1_score, team2_score)
+    update_team_data(ws, team2_index, team2_score, team1_score)
+
+    update_rankings(ws)
+
+    wb.save(path)
+
+def update_team_data(ws, team_index, goals_scored, goals_conceded):
+    ws.cell(row=team_index, column=2).value = (ws.cell(row=team_index, column=2).value or 0) + 1
+
+    if goals_scored > goals_conceded:
+        ws.cell(row=team_index, column=3).value = (ws.cell(row=team_index, column=3).value or 0) + 1
+        ws.cell(row=team_index, column=8).value = (ws.cell(row=team_index, column=8).value or 0) + 3
+        ws.cell(row=team_index, column=9).value = add_forma(ws.cell(row=team_index, column=9).value, 'GY')
+    elif goals_scored == goals_conceded:
+        ws.cell(row=team_index, column=4).value = (ws.cell(row=team_index, column=4).value or 0) + 1
+        ws.cell(row=team_index, column=8).value = (ws.cell(row=team_index, column=8).value or 0) + 1
+        ws.cell(row=team_index, column=9).value = add_forma(ws.cell(row=team_index, column=9).value, 'D')
+    else:
+        ws.cell(row=team_index, column=5).value = (ws.cell(row=team_index, column=5).value or 0) + 1
+        ws.cell(row=team_index, column=9).value = add_forma(ws.cell(row=team_index, column=9).value, 'V')
+
+    ws.cell(row=team_index, column=6).value = (ws.cell(row=team_index, column=6).value or 0) + goals_scored
+    ws.cell(row=team_index, column=7).value = (ws.cell(row=team_index, column=7).value or 0) + (goals_scored - goals_conceded)
+
+def update_rankings(ws):
+    rankings = []
+    for row in range(2, ws.max_row + 1):
+        points = ws.cell(row=row, column=8).value or 0
+        goals_diff = ws.cell(row=row, column=7).value or 0
+        rankings.append((points, goals_diff, row))
+
+    rankings.sort(key=lambda x: (-x[0], -x[1]))
+
+    for rank, (_, _, row) in enumerate(rankings, start=1):
+        ws.cell(row=row, column=10).value = rank
+
+def add_forma(current_forma, result):
+    if current_forma is None:
+        return result
+    else:
+        return f"{current_forma},{result}" if len(current_forma.split(',')) < 5 else f"{','.join(current_forma.split(',')[-4:])},{result}"
+
+if __name__ == '__main__':
+    app.run(debug=True)
+html
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mérkőzés Eredmények</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .soccer {
+            background: url(http://upload.wikimedia.org/wikipedia/en/e/ec/Soccer_ball.svg);
+            background-size: 100px 100px;
+            height: 100px;
+            width: 100px;
+            margin: 0 auto; /* Középre helyezés */
+            display: block; /* Blokk szintű elem, hogy középre kerüljön */
+            cursor: pointer; /* Mutatja, hogy kattintható */
+        }
+
+        .submission-text {
+            text-align: center; /* Középre igazítás */
+            margin-top: 10px; /* Felső margó a labda alatt */
+            font-size: 18px; /* Szövegméret */
+        }
+
+        .world-cup {
+            color: #82AE6F;
+            text-align: center;
+
+        }
+    </style>
+    <script>
+        const teams = {
+            "A": ["Güppösék", "FC Scuipă-n Dunăre", "MNV", "SEPSIUUU", "Park the bus FC", "Nagykeró", "Kamikázé"],
+            "B": ["Kolozsvári SixtyNine", "Devastation", "Ratbull", "Aranyér FC", "Koma-Szutra", "Szimplu", "Kolozsvári Góbék"],
+            "C": ["Tiffosi 2010", "Kalotaszesz", "Kárahegy", "Prokomisz", "Mad Dogs", "Screwbolt", "Fc Finnviz"]
+        };
+
+        function updateSuggestions(group) {
+            const input1 = document.querySelector('input[name="team1_name"]');
+            const input2 = document.querySelector('input[name="team2_name"]');
+            const datalist1 = document.getElementById('team1_list');
+            const datalist2 = document.getElementById('team2_list');
+
+            const teamsInGroup = teams[group];
+
+            // Clear previous suggestions
+            datalist1.innerHTML = '';
+            datalist2.innerHTML = '';
+
+            // Add new suggestions based on input
+            const input1Value = input1.value.toLowerCase();
+            const input2Value = input2.value.toLowerCase();
+
+            teamsInGroup.forEach(team => {
+                if (team.toLowerCase().startsWith(input1Value)) {
+                    const option = document.createElement('option');
+                    option.value = team;
+                    datalist1.appendChild(option);
+                }z
+                if (team.toLowerCase().startsWith(input2Value)) {
+                    const option = document.createElement('option');
+                    option.value = team;
+                    datalist2.appendChild(option);
+                }
+            });
+        }
+
+        function submitForm() {
+            document.getElementById('matchForm').submit(); // Küldje el a formot
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Mérkőzés Eredmények</h1>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form id="matchForm" action="/process" method="POST">
+            <div class="group-select">
+                <label for="group">Válassz csoportot:</label>
+                <select id="group" name="group" required onchange="updateSuggestions(this.value)">
+                    <option value="A">A csoport</option>
+                    <option value="B">B csoport</option>
+                    <option value="C">C csoport</option>
+                </select>
+            </div>
+
+            <div class="team-input">
+                <div class="team">
+                    <input type="text" name="team1_name" placeholder="Csapat 1 neve" list="team1_list" oninput="updateSuggestions(document.getElementById('group').value)" required>
+                    <datalist id="team1_list"></datalist>
+                    <input type="number" name="team1_score" placeholder="Eredmény" required>
+                </div>
+                <div class="vs-logo">VS</div>
+                <div class="team">
+                    <input type="text" name="team2_name" placeholder="Csapat 2 neve" list="team2_list" oninput="updateSuggestions(document.getElementById('group').value)" required>
+                    <datalist id="team2_list"></datalist>
+                    <input type="number" name="team2_score" placeholder="Eredmény" required>
+                </div>
+            </div>
+            <div class="soccer" onclick="submitForm()"></div> <!-- Foci labda animáció és kattintás -->
+            <div class="submission-text">Beküldés</div> <!-- Beküldés felirat -->
+        </form>
+    </div>
+</body>
+</html>
+css
+/* Alapértelmezett stílusok */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-image: url('https://scontent.fath5-1.fna.fbcdn.net/v/t39.30808-6/310339082_633031485022167_426081415825050696_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=IQeMwTP-XC8Q7kNvgHR0Gxt&_nc_zt=23&_nc_ht=scontent.fath5-1.fna&_nc_gid=Aulu-Kpo0MjEXu8AAnG2mlY&oh=00_AYDdos6OBUc-PE8fGv7fRGTDxHZ2yT6vvTZepIk9KNew7A&oe=67249FEB'); /* Cseréld ki a kép nevét a sajátodra */
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: white;
+}
+
+.container {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 600px;
+    width: 100%;
+}
+
+h1 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: #f8b400;
+}
+
+/* Csoport kiválasztás stílusa */
+.group-select {
+    margin-bottom: 20px;
+}
+
+.group-select label {
+    font-size: 1.2em;
+    color: #f8b400;
+}
+
+.group-select select {
+    font-size: 1em;
+    padding: 5px;
+    border: none;
+    border-radius: 5px;
+    background: #f8b400;
+    color: white;
+}
+
+.team-input {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+}
+
+.team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+input[type="text"], input[type="number"] {
+    width: 120px;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 5px;
+    text-align: center;
+}
+
+input[type="text"] {
+    font-size: 1em;
+}
+
+input[type="number"] {
+    font-size: 1.2em;
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+.team input {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+.team input:focus {
+    outline: none;
+    background: #f8b400;
+    color: white;
+}
+
+/* "VS" logó stílusa */
+.vs-logo {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #f8b400;
+    padding: 0 10px;
+}
+
+
